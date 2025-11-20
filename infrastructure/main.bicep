@@ -58,7 +58,7 @@ param appServiceSkuTier string = 'Free'
 
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
-var storageAccountName = '${toLower(projectPrefix)}sa${uniqueSuffix}'
+var storageAccountName = '${take(toLower(projectPrefix), 9)}sa${uniqueSuffix}'
 var postgresServerName = '${toLower(projectPrefix)}-db-${uniqueSuffix}'
 var webAppName = '${toLower(projectPrefix)}-api-${uniqueSuffix}' // Backend API
 var staticWebAppName = '${toLower(projectPrefix)}-spa-${uniqueSuffix}' // Frontend SPA
