@@ -35,6 +35,24 @@
         "appServiceSkuTier": {
             "value": "Free"
         },
+        "swaName": {
+            "value": "CostsManager-Frontend"
+        },
+        "swaSku": {
+            "value": "Free"
+        },
+        "repositoryUrl": {
+            "value": "https://github.com/MarioBR04/CostManager"
+        },
+        "branch": {
+            "value": "main"
+        },
+        "appLocation": {
+            "value": "./frontend"
+        },
+        "appArtifactLocation": {
+            "value": "dist"
+        },
         "storageAccountType": {
             "value": "Standard_LRS"
         },

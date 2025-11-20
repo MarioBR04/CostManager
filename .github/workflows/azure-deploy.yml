@@ -1,0 +1,138 @@
+name: Azure Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: 'CostsManager' # CHANGE THIS to your resource group name
+  LOCATION: 'westus3'
+
+jobs:
+  deploy-infra:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_app_name: ${{ steps.bicep_deploy.outputs.backendApiName }}
+      static_web_app_name: ${{ steps.bicep_deploy.outputs.staticWebAppName }}
+      backend_host: ${{ steps.bicep_deploy.outputs.backendApiHostName }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create Resource Group
+        run: az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
+
+      - name: Deploy Bicep
+        id: bicep_deploy
+        uses: azure/arm-deploy@v1
+        with:
+          scope: resourcegroup
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          template: ./infrastructure/main.bicep
+          parameters: ./infrastructure/main.parameters.json administratorLoginPassword=${{ secrets.DB_PASSWORD }}
+      
+      # We need to extract outputs manually if arm-deploy doesn't map them nicely or if we need specific values
+      # However, azure/arm-deploy puts outputs into steps.step_id.outputs.outputName
+      # Note: Bicep outputs need to be defined in main.bicep
+
+  deploy-backend:
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # We need the Web App Name. 
+      # Since Bicep generates a unique name, we must use the output from the infra job.
+      # But wait, the output names in main.bicep are: backendApiHostName, frontendUrl, storageAccountName, postgresServerFqdn.
+      # I didn't output the resource NAME, only the HostName. 
+      # I should update main.bicep to output the resource names too, or query it.
+      # Querying is safer.
+      
+      - name: Get Web App Name
+        id: get_names
+        run: |
+          WEB_APP_NAME=$(az webapp list --resource-group ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv)
+          echo "WEB_APP_NAME=$WEB_APP_NAME" >> $GITHUB_ENV
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.WEB_APP_NAME }}
+          package: ./backend
+
+  deploy-frontend:
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build Frontend
+        env:
+          # Construct the API URL. The backend host from Bicep output doesn't include https://
+          VITE_API_URL: https://${{ needs.deploy-infra.outputs.backend_host }}
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Static Web App Name
+        run: |
+          SWA_NAME=$(az staticwebapp list --resource-group ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'spa')].name" -o tsv)
+          echo "SWA_NAME=$SWA_NAME" >> $GITHUB_ENV
+          
+      - name: Get SWA Deployment Token
+        id: get_token
+        run: |
+          TOKEN=$(az staticwebapp secrets list --name ${{ env.SWA_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "properties.apiKey" -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "SWA_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ env.SWA_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (comments, etc.)
+          action: "upload"
+          app_location: "/frontend"
+          api_location: "" # We are hosting API separately
+          output_location: "dist"

@@ -3,6 +3,8 @@ param appName string
 param skuName string = 'F1' 
 param skuTier string = 'Free'
 param linuxFxVersion string = 'NODE|20-lts'
+param appSettings object = {}
+
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: '${appName}-plan'
   location: location
@@ -23,7 +25,10 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
     serverFarmId: appServicePlan.id
     siteConfig: {
       linuxFxVersion: linuxFxVersion
-      appCommandLine: 'pm2 serve /home/site/wwwroot --no-daemon --spa' 
+      appSettings: [for setting in items(appSettings): {
+        name: setting.key
+        value: setting.value
+      }]
     }
     httpsOnly: true
   }

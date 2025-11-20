@@ -65,5 +65,14 @@ resource aadAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2022
   }
 }
 
+resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2022-12-01' = {
+  parent: postgresServer
+  name: 'costmanager'
+  properties: {
+    charset: 'UTF8'
+    collation: 'en_US.utf8'
+  }
+}
+
 output serverName string = postgresServer.name
 output serverFqdn string = postgresServer.properties.fullyQualifiedDomainName

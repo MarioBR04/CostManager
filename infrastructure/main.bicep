@@ -23,20 +23,45 @@ param dbStorageSizeGB int = 32
 @description('PostgreSQL VM Name')
 param dbVmName string = 'Standard_B1ms'
 
-@description('PostgreSQL Backup Retention Days')
+@description('Static Web App Name')
+param swaName string = 'CostsManager-Frontend'
+
+@description('Static Web App SKU')
+param swaSku string = 'Free'
+
+@description('Repository URL for Static Web App')
+param repositoryUrl string = 'https://github.com/MarioBR04/CostManager'
+
+@description('Repository Branch')
+param branch string = 'main'
+
+@description('App Location in Repository')
+param appLocation string = './frontend'
+
+@description('App Artifact Location (build output)')
+param appArtifactLocation string = 'build'
+
+@description('Storage Account Type')
+param storageAccountType string = 'Standard_LRS'
+
+@description('Storage Access Tier')
+param storageAccessTier string = 'Hot'
+
+@description('Database Backup Retention Days')
 param dbBackupRetentionDays int = 7
 
-@description('App Service Plan SKU Name')
+@description('App Service SKU Name')
 param appServiceSkuName string = 'F1'
 
-@description('App Service Plan SKU Tier')
+@description('App Service SKU Tier')
 param appServiceSkuTier string = 'Free'
 
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var storageAccountName = '${toLower(projectPrefix)}sa${uniqueSuffix}'
 var postgresServerName = '${toLower(projectPrefix)}-db-${uniqueSuffix}'
-var webAppName = '${toLower(projectPrefix)}-app-${uniqueSuffix}'
+var webAppName = '${toLower(projectPrefix)}-api-${uniqueSuffix}' // Backend API
+var staticWebAppName = '${toLower(projectPrefix)}-spa-${uniqueSuffix}' // Frontend SPA
 
 module storage 'modules/storage.bicep' = {
   name: 'storageDeployment'
@@ -59,7 +84,7 @@ module postgres 'modules/postgres.bicep' = {
     tier: dbServerEdition
     storageSizeGB: dbStorageSizeGB
     backupRetentionDays: dbBackupRetentionDays
-    version: '13' // Defaulting to 13, can be parameterized if needed
+    version: '13'
     firewallRules: [
       {
         name: 'AllowAllAzureServices'
@@ -73,13 +98,36 @@ module postgres 'modules/postgres.bicep' = {
 module appService 'modules/appService.bicep' = {
   name: 'appServiceDeployment'
   params: {
-    location: locationWebApp
+    location: locationWebApp // Using same location for simplicity, or parameterize
     appName: webAppName
     skuName: appServiceSkuName
     skuTier: appServiceSkuTier
+    linuxFxVersion: 'NODE|20-lts' // Backend is Node.js
+    appSettings: {
+      DB_HOST: postgres.outputs.serverFqdn
+      DB_USER: administratorLogin
+      DB_PASSWORD: administratorLoginPassword
+      DB_NAME: 'costmanager'
+      DB_PORT: '5432'
+      DB_SSL: 'true'
+    }
+  }
+}
+
+module staticWebApp 'modules/staticWebApp.bicep' = {
+  name: 'staticWebAppDeployment'
+  params: {
+    location: locationWebApp
+    name: staticWebAppName
+    skuName: swaSku
+    repositoryUrl: repositoryUrl
+    branch: branch
+    appLocation: appLocation
+    appArtifactLocation: appArtifactLocation
   }
 }
 
 output storageAccountName string = storage.outputs.storageAccountName
 output postgresServerFqdn string = postgres.outputs.serverFqdn
-output webAppDefaultHostName string = appService.outputs.webAppDefaultHostName
+output backendApiHostName string = appService.outputs.webAppDefaultHostName
+output frontendUrl string = staticWebApp.outputs.staticWebAppDefaultHostname
