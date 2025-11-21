@@ -7,6 +7,9 @@ param locationStorageAndDB string = 'westus3'
 @description('Location for Static Web App')
 param locationWebApp string = 'westus2'
 
+@description('Location for App Service')
+param locationAppService string = 'westus3'
+
 @description('PostgreSQL Administrator Login')
 param administratorLogin string = 'costsmanager'
 
@@ -98,7 +101,8 @@ module postgres 'modules/postgres.bicep' = {
 module appService 'modules/appService.bicep' = {
   name: 'appServiceDeployment'
   params: {
-    location: locationWebApp // Using same location for simplicity, or parameterize
+    location: locationAppService // Using separate location for App Service
+
     appName: webAppName
     skuName: appServiceSkuName
     skuTier: appServiceSkuTier

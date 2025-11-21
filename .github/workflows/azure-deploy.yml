@@ -15,39 +15,39 @@ env:
   LOCATION: 'westus3'
 
 jobs:
-  deploy-infra:
-    runs-on: ubuntu-latest
-    outputs:
-      backend_app_name: ${{ steps.bicep_deploy.outputs.backendApiName }}
-      static_web_app_name: ${{ steps.bicep_deploy.outputs.staticWebAppName }}
-      backend_host: ${{ steps.bicep_deploy.outputs.backendApiHostName }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Create Resource Group
-        run: az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
-
-      - name: Deploy Bicep
-        id: bicep_deploy
-        uses: azure/arm-deploy@v1
-        with:
-          scope: resourcegroup
-          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: ${{ env.RESOURCE_GROUP }}
-          template: ./infrastructure/main.bicep
-          parameters: ./infrastructure/main.parameters.json administratorLoginPassword=${{ secrets.DB_PASSWORD }}
-      
-      # We need to extract outputs manually if arm-deploy doesn't map them nicely or if we need specific values
-      # However, azure/arm-deploy puts outputs into steps.step_id.outputs.outputName
-      # Note: Bicep outputs need to be defined in main.bicep
-
+#   deploy-infra:
+#     runs-on: ubuntu-latest
+#     outputs:
+#       backend_app_name: ${{ steps.bicep_deploy.outputs.backendApiName }}
+#       static_web_app_name: ${{ steps.bicep_deploy.outputs.staticWebAppName }}
+#       backend_host: ${{ steps.bicep_deploy.outputs.backendApiHostName }}
+#     steps:
+#       - uses: actions/checkout@v3
+# 
+#       - name: Azure Login
+#         uses: azure/login@v1
+#         with:
+#           creds: ${{ secrets.AZURE_CREDENTIALS }}
+# 
+#       - name: Create Resource Group
+#         run: az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
+# 
+#       - name: Deploy Bicep
+#         id: bicep_deploy
+#         uses: azure/arm-deploy@v1
+#         with:
+#           scope: resourcegroup
+#           subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+#           resourceGroupName: ${{ env.RESOURCE_GROUP }}
+#           template: ./infrastructure/main.bicep
+#           parameters: ./infrastructure/main.parameters.json administratorLoginPassword=${{ secrets.DB_PASSWORD }}
+#       
+#       # We need to extract outputs manually if arm-deploy doesn't map them nicely or if we need specific values
+#       # However, azure/arm-deploy puts outputs into steps.step_id.outputs.outputName
+#       # Note: Bicep outputs need to be defined in main.bicep
+# 
   deploy-backend:
-    needs: deploy-infra
+    # needs: deploy-infra
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -87,7 +87,7 @@ jobs:
           package: ./backend
 
   deploy-frontend:
-    needs: deploy-infra
+    # needs: deploy-infra
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -102,18 +102,20 @@ jobs:
           cd frontend
           npm install
 
-      - name: Build Frontend
-        env:
-          # Construct the API URL. The backend host from Bicep output doesn't include https://
-          VITE_API_URL: https://${{ needs.deploy-infra.outputs.backend_host }}
-        run: |
-          cd frontend
-          npm run build
-
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Backend URL
+        run: |
+          BACKEND_HOST=$(az webapp list --resource-group ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].defaultHostName" -o tsv)
+          echo "VITE_API_URL=https://$BACKEND_HOST" >> $GITHUB_ENV
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm run build
 
       - name: Get Static Web App Name
         run: |

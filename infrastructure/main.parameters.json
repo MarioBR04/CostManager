@@ -11,11 +11,11 @@
         "locationWebApp": {
             "value": "westus2"
         },
+        "locationAppService": {
+            "value": "westus3"
+        },
         "administratorLogin": {
             "value": "costsmanager"
-        },
-        "administratorLoginPassword": {
-            "value": null
         },
         "dbServerEdition": {
             "value": "Burstable"
@@ -30,10 +30,10 @@
             "value": 7
         },
         "appServiceSkuName": {
-            "value": "F1"
+            "value": "B1"
         },
         "appServiceSkuTier": {
-            "value": "Free"
+            "value": "Basic"
         },
         "swaName": {
             "value": "CostsManager-Frontend"
