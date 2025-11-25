@@ -80,6 +80,23 @@ jobs:
           WEB_APP_NAME=$(az webapp list --resource-group ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv)
           echo "WEB_APP_NAME=$WEB_APP_NAME" >> $GITHUB_ENV
 
+      - name: Get Database Host
+        run: |
+          DB_HOST=$(az postgres flexible-server list --resource-group ${{ env.RESOURCE_GROUP }} --query "[0].fullyQualifiedDomainName" -o tsv)
+          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
+
+      - name: Initialize Database
+        env:
+          DB_HOST: ${{ env.DB_HOST }}
+          DB_USER: costsmanager
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: costmanager
+          DB_PORT: 5432
+          DB_SSL: true
+        run: |
+          cd backend
+          node scripts/init-db.js
+
       - name: Deploy to App Service
         uses: azure/webapps-deploy@v2
         with:

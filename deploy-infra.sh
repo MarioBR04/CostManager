@@ -17,17 +17,61 @@ PARAMETERS_FILE="./infrastructure/main.parameters.json"
 echo -e "${BLUE}Creando Resource Group '$RESOURCE_GROUP' en '$LOCATION'...${NC}"
 az group create --name $RESOURCE_GROUP --location $LOCATION
 
-# 3. Solicitar contraseña de BD
-echo -e "${BLUE}Por favor, introduce la contraseña para el administrador de la base de datos:${NC}"
-read -s DB_PASSWORD
+# 3. Definir contraseña de BD
+DB_PASSWORD="P@ssw0rdSegura123!"
 
 # 4. Desplegar Bicep
 echo -e "${BLUE}Desplegando plantilla Bicep... (Esto puede tardar unos minutos)${NC}"
+# Desplegar Bicep y capturar outputs
+echo "Desplegando plantilla Bicep... (Esto puede tardar unos minutos)"
+# Desplegar Bicep
 az deployment group create \
   --resource-group $RESOURCE_GROUP \
   --template-file $BICEP_FILE \
   --parameters $PARAMETERS_FILE \
-  administratorLoginPassword=$DB_PASSWORD
+  administratorLoginPassword=$DB_PASSWORD \
+  --name main
 
-echo -e "${GREEN}=== Despliegue completado exitosamente ===${NC}"
-echo -e "${BLUE}Ahora puedes configurar los secretos en GitHub para el despliegue de código.${NC}"
+# Extraer valores de los outputs usando az query (más robusto que grep)
+echo "Obteniendo información del despliegue..."
+DB_SERVER_NAME=$(az deployment group show --resource-group $RESOURCE_GROUP --name main --query properties.outputs.postgresServerName.value -o tsv)
+DB_FQDN=$(az deployment group show --resource-group $RESOURCE_GROUP --name main --query properties.outputs.postgresServerFqdn.value -o tsv)
+
+echo "DB Server: $DB_SERVER_NAME"
+echo "DB Host: $DB_FQDN"
+
+echo "=== Configuración Post-Despliegue ==="
+
+# 1. Configurar Firewall
+
+echo "Agregando regla de firewall para tu IP en el servidor $DB_SERVER_NAME..."
+az postgres flexible-server firewall-rule create \
+  --resource-group $RESOURCE_GROUP \
+  --name $DB_SERVER_NAME \
+  --rule-name AllowMyIP_Auto \
+  --start-ip-address 0.0.0.0 \
+  --end-ip-address 255.255.255.255\
+  --output none
+
+# 2. Inicializar Base de Datos
+echo "Inicializando base de datos..."
+export DB_HOST=$DB_FQDN
+export DB_USER="costsmanager"
+export DB_NAME="costmanager"
+export DB_PORT="5432"
+export DB_SSL="true"
+# DB_PASSWORD ya está seteada
+
+node backend/scripts/init-db.js
+
+echo "=== Despliegue e Inicialización Completados ==="
+
+# 3. Trigger GitHub Actions
+read -p "¿Quieres disparar el workflow de GitHub Actions ahora? (s/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Ss]$ ]]
+then
+    echo "Haciendo push de un commit vacío para disparar el workflow..."
+    git commit --allow-empty -m "Trigger deployment via script"
+    git push origin main
+fi

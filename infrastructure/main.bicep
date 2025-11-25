@@ -133,5 +133,8 @@ module staticWebApp 'modules/staticWebApp.bicep' = {
 
 output storageAccountName string = storage.outputs.storageAccountName
 output postgresServerFqdn string = postgres.outputs.serverFqdn
+output postgresServerName string = postgres.outputs.serverName
 output backendApiHostName string = appService.outputs.webAppDefaultHostName
+output appServiceName string = webAppName // Or appService.outputs.webAppName if available, but variable is safe
 output frontendUrl string = staticWebApp.outputs.staticWebAppDefaultHostname
+output staticWebAppName string = staticWebAppName
