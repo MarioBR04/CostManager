@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getRecipes, createRecipe, getIngredients, updateRecipe } from '../services/api';
+import { getRecipes, createRecipe, getIngredients, updateRecipe, getRecipeById } from '../services/api';
 
 interface Recipe {
     id: number;
@@ -9,6 +9,7 @@ interface Recipe {
     total_cost: number;
     sale_price: number;
     profit_margin: number;
+    image_url?: string;
     ingredients?: any[];
 }
 
@@ -53,6 +54,7 @@ export const RecipesPage: React.FC = () => {
         sale_price: '',
         ingredients: [] as { ingredient_id: number; quantity: number; name: string; cost: number; unit: string }[]
     });
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
     const [selectedIngId, setSelectedIngId] = useState<string>("");
     const [selectedQty, setSelectedQty] = useState<string>("");
@@ -74,6 +76,7 @@ export const RecipesPage: React.FC = () => {
 
     const resetForm = () => {
         setNewRecipe({ name: '', description: '', preparation_time_minutes: '', sale_price: '', ingredients: [] });
+        setSelectedImage(null);
         setIsEditing(false);
         setEditId(null);
         setShowForm(false);
@@ -98,9 +101,6 @@ export const RecipesPage: React.FC = () => {
 
     const fetchAndSetEdit = async (id: number) => {
         try {
-            // We need to import getRecipeById if not already imported, but I'll assume I can use the one from api
-            // Actually I need to import it. I'll add it to imports.
-            const { getRecipeById } = await import('../services/api');
             const res = await getRecipeById(id);
             const recipe = res.data;
 
@@ -110,7 +110,7 @@ export const RecipesPage: React.FC = () => {
                 preparation_time_minutes: recipe.preparation_time_minutes.toString(),
                 sale_price: recipe.sale_price.toString(),
                 ingredients: recipe.ingredients.map((ri: any) => ({
-                    ingredient_id: ri.id, // Note: check if backend returns ingredient_id or id
+                    ingredient_id: ri.ingredient_id, // Correctly map ingredient_id
                     quantity: ri.quantity,
                     name: ri.name,
                     cost: ri.cost_contribution,
@@ -185,19 +185,30 @@ export const RecipesPage: React.FC = () => {
         setNewRecipe({ ...newRecipe, ingredients: updated });
     };
 
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setSelectedImage(e.target.files[0]);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const payload = {
-                ...newRecipe,
-                preparation_time_minutes: parseInt(newRecipe.preparation_time_minutes) || 0,
-                sale_price: parseFloat(newRecipe.sale_price) || 0
-            };
+            const formData = new FormData();
+            formData.append('name', newRecipe.name);
+            formData.append('description', newRecipe.description);
+            formData.append('preparation_time_minutes', newRecipe.preparation_time_minutes);
+            formData.append('sale_price', newRecipe.sale_price);
+            formData.append('ingredients', JSON.stringify(newRecipe.ingredients));
+
+            if (selectedImage) {
+                formData.append('image', selectedImage);
+            }
 
             if (isEditing && editId) {
-                await updateRecipe(editId, payload);
+                await updateRecipe(editId, formData);
             } else {
-                await createRecipe(payload);
+                await createRecipe(formData);
             }
 
             resetForm();
@@ -260,6 +271,15 @@ export const RecipesPage: React.FC = () => {
                                         value={newRecipe.description}
                                         onChange={e => setNewRecipe({ ...newRecipe, description: e.target.value })}
                                         placeholder="Breve descripción..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Imagen del Platillo</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -401,7 +421,7 @@ export const RecipesPage: React.FC = () => {
                                         {newRecipe.sale_price && (
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-500">Margen Estimado:</span>
-                                                <span className={`text-sm font-bold ${((parseFloat(newRecipe.sale_price) - estimatedCost) / parseFloat(newRecipe.sale_price)) * 100 >= 30 ? 'text-green-600' : 'text-red-500'}`}>
+                                                <span className={`text-sm font-bold ${((parseFloat(newRecipe.sale_price) - estimatedCost) / parseFloat(newRecipe.sale_price)) * 100 >= 30 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                     {((parseFloat(newRecipe.sale_price) - estimatedCost) / parseFloat(newRecipe.sale_price) * 100).toFixed(1)}%
                                                 </span>
                                             </div>
@@ -453,10 +473,14 @@ export const RecipesPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {recipes.map(rec => (
                         <div key={rec.id} className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden flex flex-col">
-                            <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center relative">
-                                <span className="text-4xl text-white opacity-30 font-bold select-none">
-                                    {rec.name.charAt(0).toUpperCase()}
-                                </span>
+                            <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center relative overflow-hidden">
+                                {rec.image_url ? (
+                                    <img src={rec.image_url} alt={rec.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-4xl text-white opacity-30 font-bold select-none">
+                                        {rec.name.charAt(0).toUpperCase()}
+                                    </span>
+                                )}
                                 <button
                                     onClick={() => handleEdit(rec)}
                                     className="absolute top-2 right-2 bg-white/20 hover:bg-white/40 text-white p-1.5 rounded-full backdrop-blur-sm transition-colors"
