@@ -30,10 +30,9 @@ export const deleteIngredient = (id: number) => api.delete(`/ingredients/${id}`)
 export const getRecipes = () => api.get('/recipes');
 export const getRecipeById = (id: number) => api.get(`/recipes/${id}`);
 export const createRecipe = (data: any) => {
-    // If data is FormData, let axios set the Content-Type automatically
     if (data instanceof FormData) {
         return api.post('/recipes', data, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { 'Content-Type': undefined }
         });
     }
     return api.post('/recipes', data);
@@ -41,7 +40,7 @@ export const createRecipe = (data: any) => {
 export const updateRecipe = (id: number, data: any) => {
     if (data instanceof FormData) {
         return api.put(`/recipes/${id}`, data, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { 'Content-Type': undefined }
         });
     }
     return api.put(`/recipes/${id}`, data);

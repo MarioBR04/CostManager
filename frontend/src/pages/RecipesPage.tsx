@@ -52,6 +52,7 @@ export const RecipesPage: React.FC = () => {
         description: '',
         preparation_time_minutes: '',
         sale_price: '',
+        image_url: '',
         ingredients: [] as { ingredient_id: number; quantity: number; name: string; cost: number; unit: string }[]
     });
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -78,7 +79,7 @@ export const RecipesPage: React.FC = () => {
     };
 
     const resetForm = () => {
-        setNewRecipe({ name: '', description: '', preparation_time_minutes: '', sale_price: '', ingredients: [] });
+        setNewRecipe({ name: '', description: '', preparation_time_minutes: '', sale_price: '', image_url: '', ingredients: [] });
         setSelectedImage(null);
         setIsEditing(false);
         setEditId(null);
@@ -112,6 +113,7 @@ export const RecipesPage: React.FC = () => {
                 description: recipe.description || '',
                 preparation_time_minutes: recipe.preparation_time_minutes.toString(),
                 sale_price: recipe.sale_price.toString(),
+                image_url: recipe.image_url || '',
                 ingredients: recipe.ingredients.map((ri: any) => ({
                     ingredient_id: ri.ingredient_id, // Correctly map ingredient_id
                     quantity: Number(ri.quantity),
@@ -278,6 +280,12 @@ export const RecipesPage: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Imagen del Platillo</label>
+                                    {newRecipe.image_url && (
+                                        <div className="mb-2">
+                                            <img src={newRecipe.image_url} alt="Current" className="h-32 w-full object-cover rounded-lg border border-gray-200" />
+                                            <p className="text-xs text-gray-500 mt-1">Imagen actual</p>
+                                        </div>
+                                    )}
                                     <input
                                         type="file"
                                         accept="image/*"
