@@ -68,7 +68,10 @@ export const RecipesPage: React.FC = () => {
         try {
             const [recRes, ingRes] = await Promise.all([getRecipes(), getIngredients()]);
             setRecipes(recRes.data);
-            setIngredients(ingRes.data);
+            setIngredients(ingRes.data.map((i: any) => ({
+                ...i,
+                cost_per_unit: Number(i.cost_per_unit)
+            })));
         } catch (error) {
             console.error(error);
         }
@@ -111,9 +114,9 @@ export const RecipesPage: React.FC = () => {
                 sale_price: recipe.sale_price.toString(),
                 ingredients: recipe.ingredients.map((ri: any) => ({
                     ingredient_id: ri.ingredient_id, // Correctly map ingredient_id
-                    quantity: ri.quantity,
+                    quantity: Number(ri.quantity),
                     name: ri.name,
-                    cost: ri.cost_contribution,
+                    cost: Number(ri.cost_contribution),
                     unit: ri.unit // This is the unit stored in DB (base unit usually)
                 }))
             });
