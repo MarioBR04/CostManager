@@ -60,7 +60,7 @@ export DB_USER="costsmanager"
 export DB_NAME="costmanager"
 export DB_PORT="5432"
 export DB_SSL="true"
-# DB_PASSWORD ya está seteada
+export DB_PASSWORD=$DB_PASSWORD
 
 node backend/scripts/init-db.js
 

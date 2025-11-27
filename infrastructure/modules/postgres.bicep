@@ -65,12 +65,22 @@ resource aadAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2022
   }
 }
 
+
 resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2022-12-01' = {
   parent: postgresServer
   name: 'costmanager'
   properties: {
     charset: 'UTF8'
     collation: 'en_US.utf8'
+  }
+}
+
+resource postgresConfig 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2022-12-01' = {
+  parent: postgresServer
+  name: 'require_secure_transport'
+  properties: {
+    value: 'OFF'
+    source: 'user-override'
   }
 }
 

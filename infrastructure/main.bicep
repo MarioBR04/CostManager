@@ -114,7 +114,7 @@ module appService 'modules/appService.bicep' = {
       DB_NAME: 'costmanager'
       DB_PORT: '5432'
       DB_SSL: 'true'
-      AZURE_STORAGE_CONNECTION_STRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storage.outputs.storageAccountId, '2021-09-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+      AZURE_STORAGE_CONNECTION_STRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storage.outputs.storageAccountKey};EndpointSuffix=${environment().suffixes.storage}'
     }
   }
 }
