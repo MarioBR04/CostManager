@@ -58,6 +58,7 @@ jobs:
           cd backend
           node scripts/init-db.js
           node scripts/run-migration.js
+          node scripts/run-migration-003.js
 
       - name: Deploy to App Service
         uses: azure/webapps-deploy@v2
