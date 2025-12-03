@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { DashboardPage } from './pages/DashboardPage';
 import { IngredientsPage } from './pages/IngredientsPage';
+import { BreakEvenPage } from './pages/BreakEvenPage';
 import { RecipesPage } from './pages/RecipesPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -34,6 +35,7 @@ const Navigation = () => {
         <Link to="/" className="logo">CostManager</Link>
         <div className="nav-links">
           <Link to="/" className="nav-link">Dashboard</Link>
+          <Link to="/break-even" className="nav-link">Punto de Equilibrio</Link>
           <Link to="/ingredients" className="nav-link">Insumos</Link>
           <Link to="/recipes" className="nav-link">Recetas</Link>
           <button onClick={logout} className="nav-link text-red-500 hover:text-red-700">Salir</button>
@@ -56,6 +58,11 @@ function App() {
               <Route path="/" element={
                 <PrivateRoute>
                   <DashboardPage />
+                </PrivateRoute>
+              } />
+              <Route path="/break-even" element={
+                <PrivateRoute>
+                  <BreakEvenPage />
                 </PrivateRoute>
               } />
               <Route path="/ingredients" element={

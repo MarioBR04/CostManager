@@ -15,39 +15,7 @@ env:
   LOCATION: 'westus3'
 
 jobs:
-#   deploy-infra:
-#     runs-on: ubuntu-latest
-#     outputs:
-#       backend_app_name: ${{ steps.bicep_deploy.outputs.backendApiName }}
-#       static_web_app_name: ${{ steps.bicep_deploy.outputs.staticWebAppName }}
-#       backend_host: ${{ steps.bicep_deploy.outputs.backendApiHostName }}
-#     steps:
-#       - uses: actions/checkout@v3
-# 
-#       - name: Azure Login
-#         uses: azure/login@v1
-#         with:
-#           creds: ${{ secrets.AZURE_CREDENTIALS }}
-# 
-#       - name: Create Resource Group
-#         run: az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
-# 
-#       - name: Deploy Bicep
-#         id: bicep_deploy
-#         uses: azure/arm-deploy@v1
-#         with:
-#           scope: resourcegroup
-#           subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-#           resourceGroupName: ${{ env.RESOURCE_GROUP }}
-#           template: ./infrastructure/main.bicep
-#           parameters: ./infrastructure/main.parameters.json administratorLoginPassword=${{ secrets.DB_PASSWORD }}
-#       
-#       # We need to extract outputs manually if arm-deploy doesn't map them nicely or if we need specific values
-#       # However, azure/arm-deploy puts outputs into steps.step_id.outputs.outputName
-#       # Note: Bicep outputs need to be defined in main.bicep
-# 
   deploy-backend:
-    # needs: deploy-infra
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -67,13 +35,6 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # We need the Web App Name. 
-      # Since Bicep generates a unique name, we must use the output from the infra job.
-      # But wait, the output names in main.bicep are: backendApiHostName, frontendUrl, storageAccountName, postgresServerFqdn.
-      # I didn't output the resource NAME, only the HostName. 
-      # I should update main.bicep to output the resource names too, or query it.
-      # Querying is safer.
-      
       - name: Get Web App Name
         id: get_names
         run: |
@@ -105,7 +66,6 @@ jobs:
           package: ./backend
 
   deploy-frontend:
-    # needs: deploy-infra
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -151,8 +111,8 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ env.SWA_TOKEN }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (comments, etc.)
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Para GitHub CICD
           action: "upload"
           app_location: "/frontend"
-          api_location: "" # We are hosting API separately
+          api_location: "" # Se hostea en el App Service
           output_location: "dist"

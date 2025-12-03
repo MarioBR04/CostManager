@@ -48,4 +48,6 @@ export const updateRecipe = (id: number, data: any) => {
 export const updateIngredient = (id: number, data: any) => api.put(`/ingredients/${id}`, data);
 
 
-
+export const getDashboardData = () => api.get('/dashboard');
+export const getFinancials = () => api.get('/financials');
+export const saveFinancials = (data: any) => api.post('/financials', data);

@@ -1,9 +1,6 @@
-#!/bin/bash
-
-# Colores para output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m' 
 
 echo -e "${BLUE}=== Iniciando despliegue de infraestructura en Azure ===${NC}"
 
@@ -67,11 +64,8 @@ node backend/scripts/init-db.js
 echo "=== Despliegue e Inicialización Completados ==="
 
 # 3. Trigger GitHub Actions
-read -p "¿Quieres disparar el workflow de GitHub Actions ahora? (s/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Ss]$ ]]
-then
-    echo "Haciendo push de un commit vacío para disparar el workflow..."
-    git commit --allow-empty -m "Trigger deployment via script"
-    git push origin main
-fi
+
+echo "Haciendo push de un commit vacío para disparar el workflow..."
+git commit --allow-empty -m "Trigger deployment via script"
+git push origin main
+
